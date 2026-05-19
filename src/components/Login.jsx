@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useShiftStore } from '../store/useShiftStore';
-import { Mail, KeyRound, AlertCircle } from 'lucide-react';
+import { Mail, KeyRound, AlertCircle, Lock } from 'lucide-react';
 import { supabase } from '../lib/supabaseClient';
 import Logo from '../assets/S-Hub_logo.png';
 
