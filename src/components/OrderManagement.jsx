@@ -8,7 +8,22 @@ export default function OrderManagement() {
   const isReadOnly = currentUser?.role === ROLES.COMPANY_ADMIN;
 
   // --- 店舗選択 ---
-  const initialShopId = currentUser?.role === ROLES.SHOP_ADMIN && currentUser.shopId ? currentUser.shopId : shops[0]?.id;
+  // 企業管理者は自社と連携済みの店舗のみ表示
+  const visibleShops = useMemo(() => {
+    if (currentUser?.role === ROLES.COMPANY_ADMIN) {
+      return shops.filter(shop => {
+        const p = partnerships.find(
+          p => p.shop_id === shop.id && p.company_id === currentUser.companyId
+        );
+        return p && p.shop_approved && p.company_approved;
+      });
+    }
+    return shops;
+  }, [shops, partnerships, currentUser]);
+
+  const initialShopId = currentUser?.role === ROLES.SHOP_ADMIN && currentUser.shopId
+    ? currentUser.shopId
+    : visibleShops[0]?.id;
   const [selectedShopId, setSelectedShopId] = useState(initialShopId);
   const effectiveShopId = selectedShopId || initialShopId;
   const selectedShop = shops.find(s => s.id === effectiveShopId);
@@ -77,7 +92,7 @@ export default function OrderManagement() {
                   value={effectiveShopId || ''}
                   onChange={(e) => setSelectedShopId(e.target.value)}
                 >
-                  {shops.map(shop => (
+                  {visibleShops.map(shop => (
                     <option key={shop.id} value={shop.id}>{shop.name}</option>
                   ))}
                 </select>

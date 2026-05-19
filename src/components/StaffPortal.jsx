@@ -525,7 +525,7 @@ export default function StaffPortal({ isPreview = false }) {
         {isPreview && <div className="absolute top-0 left-1/2 -translate-x-1/2 w-32 h-6 bg-gray-800 rounded-b-xl z-50"></div>}
 
         {/* Header */}
-        <div className="bg-slate-900 text-white pt-8 pb-8 px-4 shrink-0 shadow-md relative z-10 flex flex-col space-y-2">
+        <div className="bg-slate-900 text-white pb-4 px-4 shrink-0 shadow-md relative z-10 flex flex-col space-y-2" style={{ paddingTop: 'max(1.5rem, env(safe-area-inset-top))' }}>
           <div className="flex justify-between items-center w-full">
             <div className="flex items-center space-x-2">
               <img src={Icon} alt="S-Hub Icon" className="w-10 h-10 object-contain" />
