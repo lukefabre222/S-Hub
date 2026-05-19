@@ -159,11 +159,17 @@ export default function ReportDashboard({ effectiveTargetCompanyId }) {
     if (!isCompanyAdmin || viewMode !== 'staff') return [];
     return activeReportItems.map(item => ({
       subject: item,
-      自社平均: parseFloat(grandStats.averages[item]),
-      全体平均: parseFloat(systemStats.averages[item]),
-      fullMark: Math.max(parseFloat(grandStats.averages[item]), parseFloat(systemStats.averages[item])) * 1.2 || 10
+      自社平均: parseFloat(grandStats.averages[item]) || 0,
+      全体平均: parseFloat(systemStats.averages[item]) || 0,
     }));
   }, [activeReportItems, grandStats, systemStats, isCompanyAdmin, viewMode]);
+
+  const radarMax = useMemo(() => {
+    if (radarData.length === 0) return 10;
+    const vals = radarData.flatMap(d => [d['自社平均'], d['全体平均']]).filter(v => v > 0);
+    if (vals.length === 0) return 10;
+    return Math.ceil(Math.max(...vals) * 1.3);
+  }, [radarData]);
 
   const rankingData = useMemo(() => {
     if (viewMode !== 'ranking') return {};
@@ -290,14 +296,14 @@ export default function ReportDashboard({ effectiveTargetCompanyId }) {
                     <RadarChart cx="50%" cy="50%" outerRadius="60%" data={radarData}>
                       <PolarGrid stroke="#e5e7eb" />
                       <PolarAngleAxis dataKey="subject" tick={<CustomRadarTick />} />
-                      <PolarRadiusAxis angle={30} domain={[0, 'auto']} tick={{ fontSize: 9, fill: '#9ca3af' }} />
-                      <Tooltip 
+                      <PolarRadiusAxis angle={30} domain={[0, radarMax]} tick={{ fontSize: 9, fill: '#9ca3af' }} />
+                      <Tooltip
                         contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)', fontSize: '12px' }}
                         itemStyle={{ fontWeight: 'bold' }}
                       />
                       <Legend wrapperStyle={{ fontSize: '12px', paddingTop: '10px' }} />
-                      <Radar name="自社平均" dataKey="自社平均" stroke="#8b5cf6" fill="#8b5cf6" fillOpacity={0.5} />
-                      <Radar name="全体平均" dataKey="全体平均" stroke="#9ca3af" fill="#9ca3af" fillOpacity={0.3} />
+                      <Radar name="自社平均" dataKey="自社平均" stroke="#2563eb" fill="#3b82f6" fillOpacity={0.35} />
+                      <Radar name="全体平均" dataKey="全体平均" stroke="#dc2626" fill="#ef4444" fillOpacity={0.25} />
                     </RadarChart>
                   </ResponsiveContainer>
                 </div>

@@ -620,7 +620,7 @@ export default function StaffPortal({ isPreview = false }) {
           const status = shift?.reportData?.status || 'draft';
           if (shift && (status === 'clocked_out' || selectedDate) && status !== 'submitted') {
             return (
-              <div className="absolute bottom-[4.5rem] left-0 right-0 p-4 bg-gradient-to-t from-gray-100 pt-8 z-20 pointer-events-none">
+              <div className="absolute left-0 right-0 p-4 bg-gradient-to-t from-gray-100 pt-8 z-20 pointer-events-none" style={{ bottom: 'calc(4.5rem + env(safe-area-inset-bottom))' }}>
                 <button
                   onClick={handleSaveReport}
                   className="w-full bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white font-bold py-4 px-4 rounded-xl shadow-lg transition active:scale-95 flex items-center justify-center text-base pointer-events-auto"
