@@ -356,8 +356,8 @@ export default function ReportDashboard({ effectiveTargetCompanyId }) {
                 </div>
 
                 {/* チャート本体 */}
-                <div className="flex-1 p-4" style={{ minHeight: '460px' }}>
-                  <ResponsiveContainer width="100%" height="100%">
+                <div className="p-4">
+                  <ResponsiveContainer width="100%" height={460}>
                     <RadarChart cx="50%" cy="50%" outerRadius="60%" data={filteredRadarData}>
                       <PolarGrid stroke="#e5e7eb" />
                       <PolarAngleAxis dataKey="subject" tick={<CustomRadarTick />} />
