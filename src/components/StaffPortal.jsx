@@ -656,23 +656,29 @@ export default function StaffPortal({ isPreview = false }) {
             <Trophy size={22} className="mb-1" />
             <span className="text-[10px] font-bold">実績確認</span>
           </button>
-          <button
-            onClick={() => {
-              setActiveTab('notifications');
-              notifications.filter(n => !n.is_read).forEach(n => markNotificationAsRead(n.id));
-            }}
-            className={`flex flex-col items-center justify-center w-full h-full transition-colors relative ${activeTab === 'notifications' ? 'text-indigo-600' : 'text-gray-400 hover:text-gray-600'}`}
-          >
-            <div className="relative">
-              <Bell size={22} className="mb-1" />
-              {notifications.filter(n => !n.is_read).length > 0 && (
-                <span className="absolute -top-1 -right-1 bg-red-500 text-white text-[9px] font-bold rounded-full min-w-[14px] h-[14px] flex items-center justify-center px-0.5">
-                  {notifications.filter(n => !n.is_read).length > 9 ? '9+' : notifications.filter(n => !n.is_read).length}
-                </span>
-              )}
-            </div>
-            <span className="text-[10px] font-bold">通知</span>
-          </button>
+          {(() => {
+            const unreadCount = notifications.filter(n => !n.is_read).length;
+            const notifColor = activeTab === 'notifications' ? 'text-indigo-600' : unreadCount > 0 ? 'text-red-500' : 'text-gray-400 hover:text-gray-600';
+            return (
+              <button
+                onClick={() => {
+                  setActiveTab('notifications');
+                  notifications.filter(n => !n.is_read).forEach(n => markNotificationAsRead(n.id));
+                }}
+                className={`flex flex-col items-center justify-center w-full h-full transition-colors ${notifColor}`}
+              >
+                <div className="relative">
+                  <Bell size={22} className="mb-1" />
+                  {unreadCount > 0 && (
+                    <span className="absolute -top-1 -right-1 bg-red-500 text-white text-[9px] font-bold rounded-full min-w-[14px] h-[14px] flex items-center justify-center px-0.5">
+                      {unreadCount > 9 ? '9+' : unreadCount}
+                    </span>
+                  )}
+                </div>
+                <span className="text-[10px] font-bold">通知</span>
+              </button>
+            );
+          })()}
           <button
             onClick={logout}
             className="flex flex-col items-center justify-center w-full h-full transition-colors text-gray-400 hover:text-red-500"
