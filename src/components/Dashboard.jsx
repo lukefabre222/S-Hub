@@ -1,17 +1,23 @@
 import React, { useMemo } from 'react';
-import { useShiftStore } from '../store/useShiftStore';
+import { useShiftStore, ROLES } from '../store/useShiftStore';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import { TrendingUp, Users, DollarSign } from 'lucide-react';
 
 export default function Dashboard() {
-  const { staffs, shops, assignments } = useShiftStore();
+  const { staffs, shops, assignments, currentUser, partnerships } = useShiftStore();
 
   const stats = useMemo(() => {
     let totalSales = 0;
     let totalCost = 0;
     
+    // 表示対象の店舗をフィルタリング（企業管理者は相互承認済みの店舗のみ、システム管理者は全店舗）
+    const activePartnerShops = currentUser?.role === ROLES.SYS_ADMIN ? shops : shops.filter(shop => {
+      const p = partnerships.find(p => p.shop_id === shop.id && p.company_id === currentUser?.companyId);
+      return p && p.shop_approved && p.company_approved;
+    });
+
     // Calculate per shop
-    const shopStats = shops.reduce((acc, shop) => {
+    const shopStats = activePartnerShops.reduce((acc, shop) => {
       acc[shop.id] = { name: shop.name, sales: 0, cost: 0, profit: 0, count: 0 };
       return acc;
     }, {});
@@ -19,18 +25,26 @@ export default function Dashboard() {
     Object.entries(assignments).forEach(([dateStr, dayAssignments]) => {
       Object.entries(dayAssignments).forEach(([staffId, assignment]) => {
         const staff = staffs.find(s => s.id === staffId);
+        
+        // 企業管理者の場合、自社のスタッフのアサインのみを集計する
+        if (currentUser?.role === 'company_admin' && staff?.companyId !== currentUser.companyId) {
+          return;
+        }
+
         const shop = shops.find(s => s.id === assignment.shopId);
         const businessType = assignment.businessType;
         
         if (staff && shop && businessType) {
-          const rate = shop.rates[businessType] || 0;
+          const rate = shop.rates?.[staff.companyId]?.[businessType] || 0;
           totalSales += rate;
           totalCost += staff.dailySalary;
           
-          shopStats[shop.id].sales += rate;
-          shopStats[shop.id].cost += staff.dailySalary;
-          shopStats[shop.id].profit += (rate - staff.dailySalary);
-          shopStats[shop.id].count += 1;
+          if (shopStats[shop.id]) {
+            shopStats[shop.id].sales += rate;
+            shopStats[shop.id].cost += staff.dailySalary;
+            shopStats[shop.id].profit += (rate - staff.dailySalary);
+            shopStats[shop.id].count += 1;
+          }
         }
       });
     });
