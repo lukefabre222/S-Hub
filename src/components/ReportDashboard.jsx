@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { useShiftStore } from '../store/useShiftStore';
-import { FileBarChart, Users as UsersIcon, Store, Calculator, LineChart, Calendar, Trophy, Eye, EyeOff } from 'lucide-react';
+import { FileBarChart, Users as UsersIcon, Store, Calculator, LineChart, Calendar, Trophy, Eye, EyeOff, ListFilter, ChevronDown, ChevronUp } from 'lucide-react';
 import { Radar, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, ResponsiveContainer, Legend, Tooltip } from 'recharts';
 
 const CustomRadarTick = ({ payload, x, y, cx, cy, ...rest }) => {
@@ -50,6 +50,7 @@ export default function ReportDashboard({ effectiveTargetCompanyId }) {
   const [viewMode, setViewMode] = useState('staff'); // 'staff' | 'shop' | 'ranking'
   const [showRadarChart, setShowRadarChart] = useState(true);
   const [selectedRadarItems, setSelectedRadarItems] = useState(null); // null = 全選択
+  const [showItemFilter, setShowItemFilter] = useState(false);
 
   const toggleRadarItem = (item) => {
     const current = selectedRadarItems ?? new Set(activeReportItems);
@@ -303,29 +304,59 @@ export default function ReportDashboard({ effectiveTargetCompanyId }) {
             
             {/* レーダーチャート (左側) */}
             {isCompanyAdmin && viewMode === 'staff' && radarData.length > 0 && showRadarChart && (
-              <div className="w-full xl:w-1/3 shrink-0 bg-white rounded-xl shadow-sm border border-gray-100 p-6 flex flex-col items-center">
-                <h3 className="text-center font-bold text-gray-700 mb-1 flex items-center justify-center text-sm">
-                  <LineChart size={16} className="mr-1.5 text-purple-600" />
-                  平均比較レーダーチャート
-                </h3>
-                <p className="text-[10px] text-center text-gray-400 mb-3">外側に広がるほど実績が高いことを示します</p>
-                <div className="flex flex-wrap gap-1.5 justify-center mb-4">
-                  {activeReportItems.map(item => {
-                    const checked = !selectedRadarItems || selectedRadarItems.has(item);
-                    return (
-                      <label key={item} className={`flex items-center gap-1.5 text-[11px] font-medium cursor-pointer select-none px-2 py-1 rounded-md border transition-colors ${checked ? 'bg-blue-50 border-blue-300 text-blue-700' : 'bg-gray-50 border-gray-200 text-gray-400'}`}>
-                        <input
-                          type="checkbox"
-                          checked={checked}
-                          onChange={() => toggleRadarItem(item)}
-                          className="accent-blue-600 w-3 h-3"
-                        />
-                        {item}
-                      </label>
-                    );
-                  })}
+              <div className="w-full xl:w-1/3 shrink-0 bg-white rounded-xl shadow-sm border border-gray-100 flex flex-col">
+                {/* カードヘッダー */}
+                <div className="px-5 pt-5 pb-3 border-b border-gray-100">
+                  <div className="flex items-center justify-between mb-1">
+                    <h3 className="font-bold text-gray-700 flex items-center text-sm">
+                      <LineChart size={16} className="mr-1.5 text-purple-600" />
+                      平均比較レーダーチャート
+                    </h3>
+                    <button
+                      onClick={() => setShowItemFilter(v => !v)}
+                      className={`flex items-center gap-1 text-xs font-bold px-2.5 py-1.5 rounded-lg border transition-colors ${showItemFilter ? 'bg-blue-600 text-white border-blue-600' : 'bg-white text-blue-600 border-blue-300 hover:bg-blue-50'}`}
+                    >
+                      <ListFilter size={13} />
+                      表示項目選択
+                      {showItemFilter ? <ChevronUp size={12} /> : <ChevronDown size={12} />}
+                    </button>
+                  </div>
+                  <p className="text-[10px] text-gray-400">外側に広がるほど実績が高いことを示します</p>
+
+                  {/* アコーディオン */}
+                  {showItemFilter && (
+                    <div className="mt-3 pt-3 border-t border-gray-100">
+                      <div className="flex items-center justify-between mb-2">
+                        <span className="text-[11px] font-bold text-gray-500">表示する項目を選択</span>
+                        <button
+                          onClick={() => setSelectedRadarItems(null)}
+                          className="text-[10px] text-blue-500 hover:underline font-medium"
+                        >
+                          すべて選択
+                        </button>
+                      </div>
+                      <div className="flex flex-wrap gap-1.5">
+                        {activeReportItems.map(item => {
+                          const checked = !selectedRadarItems || selectedRadarItems.has(item);
+                          return (
+                            <label key={item} className={`flex items-center gap-1.5 text-[11px] font-medium cursor-pointer select-none px-2 py-1 rounded-md border transition-colors ${checked ? 'bg-blue-50 border-blue-300 text-blue-700' : 'bg-gray-50 border-gray-200 text-gray-400'}`}>
+                              <input
+                                type="checkbox"
+                                checked={checked}
+                                onChange={() => toggleRadarItem(item)}
+                                className="accent-blue-600 w-3 h-3"
+                              />
+                              {item}
+                            </label>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
                 </div>
-                <div className="h-[460px] w-full">
+
+                {/* チャート本体 */}
+                <div className="flex-1 p-4" style={{ minHeight: '460px' }}>
                   <ResponsiveContainer width="100%" height="100%">
                     <RadarChart cx="50%" cy="50%" outerRadius="60%" data={filteredRadarData}>
                       <PolarGrid stroke="#e5e7eb" />
