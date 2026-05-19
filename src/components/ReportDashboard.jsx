@@ -49,6 +49,19 @@ export default function ReportDashboard({ effectiveTargetCompanyId }) {
   const isCompanyAdmin = currentUser?.role === 'company_admin';
   const [viewMode, setViewMode] = useState('staff'); // 'staff' | 'shop' | 'ranking'
   const [showRadarChart, setShowRadarChart] = useState(true);
+  const [selectedRadarItems, setSelectedRadarItems] = useState(null); // null = 全選択
+
+  const toggleRadarItem = (item) => {
+    const current = selectedRadarItems ?? new Set(activeReportItems);
+    const next = new Set(current);
+    if (next.has(item)) {
+      if (next.size <= 1) return; // 最低1つは選択必須
+      next.delete(item);
+    } else {
+      next.add(item);
+    }
+    setSelectedRadarItems(next.size === activeReportItems.length ? null : next);
+  };
 
   const activeReportItems = useMemo(() => {
     const items = reportItems.filter(item => !item.companyId || item.companyId === effectiveTargetCompanyId).map(i => i.name);
@@ -164,12 +177,17 @@ export default function ReportDashboard({ effectiveTargetCompanyId }) {
     }));
   }, [activeReportItems, grandStats, systemStats, isCompanyAdmin, viewMode]);
 
+  const filteredRadarData = useMemo(() => {
+    if (!selectedRadarItems) return radarData;
+    return radarData.filter(d => selectedRadarItems.has(d.subject));
+  }, [radarData, selectedRadarItems]);
+
   const radarMax = useMemo(() => {
-    if (radarData.length === 0) return 10;
-    const vals = radarData.flatMap(d => [d['自社平均'], d['全体平均']]).filter(v => v > 0);
+    if (filteredRadarData.length === 0) return 10;
+    const vals = filteredRadarData.flatMap(d => [d['自社平均'], d['全体平均']]).filter(v => v > 0);
     if (vals.length === 0) return 10;
     return Math.ceil(Math.max(...vals) * 1.3);
-  }, [radarData]);
+  }, [filteredRadarData]);
 
   const rankingData = useMemo(() => {
     if (viewMode !== 'ranking') return {};
@@ -290,10 +308,26 @@ export default function ReportDashboard({ effectiveTargetCompanyId }) {
                   <LineChart size={16} className="mr-1.5 text-purple-600" />
                   平均比較レーダーチャート
                 </h3>
-                <p className="text-[10px] text-center text-gray-400 mb-4">外側に広がるほど実績が高いことを示します</p>
-                <div className="h-[500px] w-full">
+                <p className="text-[10px] text-center text-gray-400 mb-3">外側に広がるほど実績が高いことを示します</p>
+                <div className="flex flex-wrap gap-1.5 justify-center mb-4">
+                  {activeReportItems.map(item => {
+                    const checked = !selectedRadarItems || selectedRadarItems.has(item);
+                    return (
+                      <label key={item} className={`flex items-center gap-1.5 text-[11px] font-medium cursor-pointer select-none px-2 py-1 rounded-md border transition-colors ${checked ? 'bg-blue-50 border-blue-300 text-blue-700' : 'bg-gray-50 border-gray-200 text-gray-400'}`}>
+                        <input
+                          type="checkbox"
+                          checked={checked}
+                          onChange={() => toggleRadarItem(item)}
+                          className="accent-blue-600 w-3 h-3"
+                        />
+                        {item}
+                      </label>
+                    );
+                  })}
+                </div>
+                <div className="h-[460px] w-full">
                   <ResponsiveContainer width="100%" height="100%">
-                    <RadarChart cx="50%" cy="50%" outerRadius="60%" data={radarData}>
+                    <RadarChart cx="50%" cy="50%" outerRadius="60%" data={filteredRadarData}>
                       <PolarGrid stroke="#e5e7eb" />
                       <PolarAngleAxis dataKey="subject" tick={<CustomRadarTick />} />
                       <PolarRadiusAxis angle={30} domain={[0, radarMax]} tick={{ fontSize: 9, fill: '#9ca3af' }} />
