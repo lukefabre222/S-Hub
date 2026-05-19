@@ -1,10 +1,18 @@
 import React, { useState, useMemo } from 'react';
 import { useShiftStore, getDayOfWeek } from '../store/useShiftStore';
-import { Smartphone, ChevronRight, ChevronLeft, Save, CheckCircle2, AlertCircle, Calendar as CalendarIconLucide, List, Clock, Trophy, LogIn, LogOut } from 'lucide-react';
+import { Smartphone, ChevronRight, ChevronLeft, Save, CheckCircle2, AlertCircle, Calendar as CalendarIconLucide, List, Clock, Trophy, LogIn, LogOut, Bell, MessageCircle, ClipboardList } from 'lucide-react';
 import Icon from '../assets/S-Hub_icon.png';
 
+function timeAgoStaff(dateStr) {
+  const diff = Math.floor((Date.now() - new Date(dateStr)) / 1000);
+  if (diff < 60) return 'たった今';
+  if (diff < 3600) return `${Math.floor(diff / 60)}分前`;
+  if (diff < 86400) return `${Math.floor(diff / 3600)}時間前`;
+  return `${Math.floor(diff / 86400)}日前`;
+}
+
 export default function StaffPortal({ isPreview = false }) {
-  const { staffs, dates, assignments, shops, reportItems, reports, saveReport, currentUser, logout, targetYearMonth, setTargetYearMonth } = useShiftStore();
+  const { staffs, dates, assignments, shops, reportItems, reports, saveReport, currentUser, logout, targetYearMonth, setTargetYearMonth, notifications, markNotificationAsRead } = useShiftStore();
   const [activeTab, setActiveTab] = useState('shifts'); // 'shifts' | 'report' | 'ranking'
   const [shiftViewMode, setShiftViewMode] = useState('list'); // 'list' | 'calendar'
 
@@ -573,6 +581,37 @@ export default function StaffPortal({ isPreview = false }) {
           {activeTab === 'report' && renderReportTab()}
           {activeTab === 'ranking' && renderRankingTab()}
 
+          {activeTab === 'notifications' && (
+            <div className="animate-in fade-in duration-300">
+              <h3 className="text-gray-500 font-bold text-xs flex items-center mb-4">
+                <Bell size={14} className="mr-1" /> 通知
+              </h3>
+              {notifications.length === 0 ? (
+                <div className="text-center text-gray-400 mt-12 bg-white p-6 rounded-2xl border border-dashed border-gray-300 text-sm">
+                  通知はありません
+                </div>
+              ) : (
+                <div className="bg-white rounded-2xl overflow-hidden shadow-sm divide-y divide-gray-50">
+                  {notifications.map(notif => (
+                    <div key={notif.id} className={`px-4 py-3 flex items-start gap-3 ${!notif.is_read ? 'bg-indigo-50/60' : ''}`}>
+                      <div className="mt-0.5 shrink-0">
+                        {notif.type === 'new_message' ? <MessageCircle size={16} className="text-indigo-500" />
+                          : notif.type === 'assignment_published' ? <CheckCircle2 size={16} className="text-green-500" />
+                          : <ClipboardList size={16} className="text-amber-500" />}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className={`text-xs leading-snug ${!notif.is_read ? 'font-bold text-gray-800' : 'font-medium text-gray-600'}`}>{notif.title}</p>
+                        <p className="text-xs text-gray-500 mt-0.5 line-clamp-2">{notif.body}</p>
+                        <p className="text-[10px] text-gray-400 mt-1">{timeAgoStaff(notif.created_at)}</p>
+                      </div>
+                      {!notif.is_read && <span className="w-2 h-2 rounded-full bg-indigo-500 shrink-0 mt-1" />}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+
         </div>
 
         {/* Report Action Button (Only in report tab when form is active) */}
@@ -616,6 +655,23 @@ export default function StaffPortal({ isPreview = false }) {
           >
             <Trophy size={22} className="mb-1" />
             <span className="text-[10px] font-bold">実績確認</span>
+          </button>
+          <button
+            onClick={() => {
+              setActiveTab('notifications');
+              notifications.filter(n => !n.is_read).forEach(n => markNotificationAsRead(n.id));
+            }}
+            className={`flex flex-col items-center justify-center w-full h-full transition-colors relative ${activeTab === 'notifications' ? 'text-indigo-600' : 'text-gray-400 hover:text-gray-600'}`}
+          >
+            <div className="relative">
+              <Bell size={22} className="mb-1" />
+              {notifications.filter(n => !n.is_read).length > 0 && (
+                <span className="absolute -top-1 -right-1 bg-red-500 text-white text-[9px] font-bold rounded-full min-w-[14px] h-[14px] flex items-center justify-center px-0.5">
+                  {notifications.filter(n => !n.is_read).length > 9 ? '9+' : notifications.filter(n => !n.is_read).length}
+                </span>
+              )}
+            </div>
+            <span className="text-[10px] font-bold">通知</span>
           </button>
           <button
             onClick={logout}
