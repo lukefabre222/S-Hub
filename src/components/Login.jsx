@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
 import { useShiftStore } from '../store/useShiftStore';
-import { Share2, Lock, Mail, KeyRound, AlertCircle } from 'lucide-react';
+import { Mail, KeyRound, AlertCircle } from 'lucide-react';
 import { supabase } from '../lib/supabaseClient';
+import Logo from '../assets/S-Hub_logo.png';
 
 export default function Login() {
   const { login } = useShiftStore();
@@ -57,13 +58,9 @@ export default function Login() {
   return (
     <div className="min-h-screen bg-slate-900 flex flex-col items-center justify-center p-4 font-sans">
       <div className="w-full max-w-md bg-white rounded-3xl shadow-2xl overflow-hidden">
-        <div className="bg-slate-800 p-8 text-center border-b-4 border-blue-500 relative overflow-hidden">
-          <div className="absolute -top-10 -right-10 p-4 opacity-5">
-            <Share2 size={180} />
-          </div>
-          <Share2 size={48} className="text-blue-400 mx-auto mb-4 relative z-10" />
-          <h1 className="text-3xl font-extrabold text-white tracking-wider relative z-10">DispatchPRO</h1>
-          <p className="text-slate-400 mt-2 text-sm relative z-10 font-medium">B2B2C 派遣・実績統合プラットフォーム</p>
+        <div className="bg-slate-800 p-8 text-center border-b-4 border-blue-500">
+          <img src={Logo} alt="S-Hub" className="h-10 mx-auto" />
+          <p className="text-slate-400 mt-3 text-sm font-medium">シフト管理・スタッフポータル</p>
         </div>
 
         <div className="p-8">
