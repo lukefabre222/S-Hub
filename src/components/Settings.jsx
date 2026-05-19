@@ -1,7 +1,16 @@
 import React, { useState, useEffect } from 'react';
 import { useShiftStore, BUSINESS_TYPES, ROLES } from '../store/useShiftStore';
 import { Settings as SettingsIcon, Store, UserCog, ListChecks, Plus, Trash2, Users, Mail, KeyRound, Building, AlertCircle, GripVertical, Pencil } from 'lucide-react';
-import { supabase, supabaseAdmin } from '../lib/supabaseClient';
+import { supabase } from '../lib/supabaseClient';
+
+const adminUsers = async (action, params = {}) => {
+  const { data, error } = await supabase.functions.invoke('admin-users', {
+    body: { action, ...params },
+  });
+  if (error) throw error;
+  if (data?.error) throw new Error(data.error);
+  return data;
+};
 import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd';
 
 export default function Settings() {
@@ -54,17 +63,13 @@ export default function Settings() {
   const [editError, setEditError] = useState('');
 
   const fetchAllUsers = async () => {
-    if (!supabaseAdmin) return;
     setIsLoadingUsers(true);
     try {
-      const { data: authData, error: authError } = await supabaseAdmin.auth.admin.listUsers();
-      if (authError) throw authError;
+      const { users } = await adminUsers('list');
+      const { data: profiles } = await supabase.from('profiles').select('*');
 
-      const { data: profiles, error: profilesError } = await supabase.from('profiles').select('*');
-      if (profilesError) throw profilesError;
-
-      const combined = profiles.map(profile => {
-        const authUser = authData.users.find(u => u.id === profile.id);
+      const combined = (profiles || []).map(profile => {
+        const authUser = users.find((u) => u.id === profile.id);
         return {
           ...profile,
           email: authUser?.email || '',
@@ -72,7 +77,7 @@ export default function Settings() {
         };
       });
 
-      const filteredUsers = currentUser.role === ROLES.COMPANY_ADMIN 
+      const filteredUsers = currentUser.role === ROLES.COMPANY_ADMIN
         ? combined.filter(u => u.company_id === currentUser.companyId && (u.role === ROLES.STAFF || u.role === ROLES.COMPANY_ADMIN))
         : combined;
       setAllUsers(filteredUsers);
@@ -92,9 +97,7 @@ export default function Settings() {
   const handleDeleteUser = async (userId, userName) => {
     if (!window.confirm(`本当に「${userName}」を削除しますか？\nこの操作は取り消せません。`)) return;
     try {
-      const { error } = await supabaseAdmin.auth.admin.deleteUser(userId);
-      if (error) throw error;
-      await supabase.from('profiles').delete().eq('id', userId);
+      await adminUsers('delete', { userId });
       setAllUsers(prev => prev.filter(u => u.id !== userId));
       alert('ユーザーを削除しました。');
     } catch (err) {
@@ -108,22 +111,16 @@ export default function Settings() {
     setEditError('');
 
     try {
-      const authUpdates = { email: editEmail };
-      if (editPassword) {
-        authUpdates.password = editPassword;
-      }
-      const { error: authError } = await supabaseAdmin.auth.admin.updateUserById(editingUser.id, authUpdates);
-      if (authError) throw authError;
-
-      const { error: profileError } = await supabase.from('profiles').update({
+      await adminUsers('update', {
+        userId: editingUser.id,
+        email: editEmail,
+        password: editPassword || undefined,
         name: editName,
         role: editRole,
-        company_id: (editRole === ROLES.STAFF || editRole === ROLES.COMPANY_ADMIN) ? editCompanyId || null : null,
-        shop_id: editRole === ROLES.SHOP_ADMIN ? editShopId || null : null,
-        daily_salary: (editRole === ROLES.STAFF || editRole === ROLES.COMPANY_ADMIN) ? Number(editDailySalary) : null,
-      }).eq('id', editingUser.id);
-      
-      if (profileError) throw profileError;
+        companyId: editCompanyId,
+        shopId: editShopId,
+        dailySalary: editDailySalary,
+      });
 
       alert('ユーザー情報を更新しました。');
       setEditingUser(null);
@@ -165,90 +162,28 @@ export default function Settings() {
 
   const handleCreateUser = async (e) => {
     e.preventDefault();
-    if (!supabaseAdmin) {
-       setCreateError('システムエラー: Service Role Key が設定されていないため、代理作成を実行できません。');
-       return;
-    }
-    
     setIsCreating(true);
     setCreateMsg('');
     setCreateError('');
-    
+
     try {
-      // 1. 本来ログアウトしてしまう signUp の代わりに supabaseAdmin を使って強制的に作成する
-      const { data: authData, error: authError } = await supabaseAdmin.auth.admin.createUser({
+      await adminUsers('create', {
         email: newEmail,
         password: newPassword,
-        email_confirm: true // 自動で確認済みにする
+        name: newName,
+        role: newRole,
+        companyName: newCompanyName,
+        shopName: newShopName,
+        targetCompanyId,
+        dailySalary: newDailySalary,
       });
-      
-      if (authError) throw authError;
-
-      // 2. 作成された Auth ユーザーID を元に profiles にマスタデータを登録
-      let finalCompanyId = null;
-      let finalShopId = null;
-
-      if (currentUser.role === ROLES.COMPANY_ADMIN) {
-        // 企業管理者は自分の会社IDで強制固定 (スタッフのみ)
-        finalCompanyId = currentUser.companyId; 
-      } else {
-        if (newRole === ROLES.COMPANY_ADMIN) {
-          // 企業管理者のアカウント発行時は、入力された企業名で同時にマスタも新規作成する
-          const { data: newComp, error: compErr } = await supabaseAdmin
-            .from('companies')
-            .insert([{ name: newCompanyName }])
-            .select()
-            .single();
-          if (compErr) throw compErr;
-          finalCompanyId = newComp.id;
-        } else if (newRole === ROLES.STAFF) {
-          finalCompanyId = targetCompanyId;
-        }
-        
-        if (newRole === ROLES.SHOP_ADMIN) {
-          // 店舗管理者のアカウント発行時は、入力された店舗名がすでに存在するかチェックする
-          const { data: existingShop } = await supabaseAdmin
-            .from('shops')
-            .select('*')
-            .eq('name', newShopName)
-            .single();
-
-          if (existingShop) {
-            finalShopId = existingShop.id;
-          } else {
-            const { data: newShop, error: shopErr } = await supabaseAdmin
-              .from('shops')
-              .insert([{ name: newShopName }])
-              .select()
-              .single();
-            if (shopErr) throw shopErr;
-            finalShopId = newShop.id;
-          }
-        }
-      }
-
-      // 3. Profilesへ登録
-      const finalRole = currentUser.role === ROLES.COMPANY_ADMIN ? ROLES.STAFF : newRole;
-      const { error: profileError } = await supabaseAdmin.from('profiles').insert([{
-         id: authData.user.id,
-         name: newName,
-         role: finalRole,
-         company_id: finalCompanyId,
-         shop_id: finalShopId,
-         daily_salary: (finalRole === ROLES.STAFF || finalRole === ROLES.COMPANY_ADMIN) ? Number(newDailySalary) : null
-      }]);
-      
-      if (profileError) throw profileError;
 
       setCreateMsg(`成功: ${newName} 様のアカウントを発行しました！`);
       setNewEmail('');
       setNewPassword('');
       setNewName('');
       setNewDailySalary('');
-      if (currentUser.role === ROLES.COMPANY_ADMIN) {
-        fetchAllUsers();
-      }
-      
+      fetchAllUsers();
     } catch (err) {
       setCreateError(err.message);
     } finally {
