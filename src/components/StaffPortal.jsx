@@ -545,7 +545,7 @@ export default function StaffPortal({ isPreview = false }) {
         </div>
 
         {/* Content */}
-        <div className="flex-1 overflow-y-auto p-4 pb-24 bg-gray-100 relative">
+        <div className="flex-1 overflow-y-auto p-4 bg-gray-100 relative" style={{ paddingBottom: 'calc(4.5rem + env(safe-area-inset-bottom) + 1rem)' }}>
           {activeTab === 'shifts' && (
             <div className="animate-in fade-in duration-300">
               <div className="flex items-center justify-between mb-4">
@@ -634,7 +634,8 @@ export default function StaffPortal({ isPreview = false }) {
         })()}
 
         {/* Bottom Navigation */}
-        <div className="absolute bottom-0 left-0 right-0 h-[4.5rem] bg-white border-t border-gray-200 flex items-center justify-around z-30 pb-2">
+        <div className="absolute bottom-0 left-0 right-0 bg-white border-t border-gray-200 z-30" style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}>
+        <div className="h-[4.5rem] flex items-center justify-around">
           <button
             onClick={() => { setActiveTab('shifts'); setSelectedDate(null); }}
             className={`flex flex-col items-center justify-center w-full h-full transition-colors ${activeTab === 'shifts' ? 'text-indigo-600' : 'text-gray-400 hover:text-gray-600'}`}
@@ -686,6 +687,7 @@ export default function StaffPortal({ isPreview = false }) {
             <LogOut size={22} className="mb-1" />
             <span className="text-[10px] font-bold">ログアウト</span>
           </button>
+        </div>
         </div>
 
       </div>
