@@ -40,6 +40,11 @@ export default function Settings() {
   const [newCompanyName, setNewCompanyName] = useState('');
   const [newShopName, setNewShopName] = useState('');
   const [targetCompanyId, setTargetCompanyId] = useState('');
+  useEffect(() => {
+    if (companies.length > 0 && !targetCompanyId) {
+      setTargetCompanyId(companies[0].id);
+    }
+  }, [companies, targetCompanyId]);
   const [targetShopId, setTargetShopId] = useState('');
   const [newDailySalary, setNewDailySalary] = useState(''); // NEW
   
