@@ -545,7 +545,7 @@ export default function StaffPortal({ isPreview = false }) {
         </div>
 
         {/* Content */}
-        <div className="flex-1 overflow-y-auto p-4 bg-gray-100 relative" style={{ paddingBottom: 'calc(4.5rem + env(safe-area-inset-bottom) + 1rem)' }}>
+        <div className="flex-1 overflow-y-auto p-4 bg-gray-100 relative" style={{ paddingBottom: 'calc(4.5rem + max(8px, env(safe-area-inset-bottom)) + 1rem)' }}>
           {activeTab === 'shifts' && (
             <div className="animate-in fade-in duration-300">
               <div className="flex items-center justify-between mb-4">
@@ -620,7 +620,7 @@ export default function StaffPortal({ isPreview = false }) {
           const status = shift?.reportData?.status || 'draft';
           if (shift && (status === 'clocked_out' || selectedDate) && status !== 'submitted') {
             return (
-              <div className="absolute left-0 right-0 p-4 bg-gradient-to-t from-gray-100 pt-8 z-20 pointer-events-none" style={{ bottom: 'calc(4.5rem + env(safe-area-inset-bottom))' }}>
+              <div className={`${isPreview ? 'absolute' : 'fixed'} left-0 right-0 p-4 bg-gradient-to-t from-gray-100 pt-8 z-20 pointer-events-none`} style={{ bottom: 'calc(4.5rem + max(8px, env(safe-area-inset-bottom)))' }}>
                 <button
                   onClick={handleSaveReport}
                   className="w-full bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white font-bold py-4 px-4 rounded-xl shadow-lg transition active:scale-95 flex items-center justify-center text-base pointer-events-auto"
@@ -634,7 +634,7 @@ export default function StaffPortal({ isPreview = false }) {
         })()}
 
         {/* Bottom Navigation */}
-        <div className="absolute bottom-0 left-0 right-0 bg-white border-t border-gray-200 z-30" style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}>
+        <div className={`${isPreview ? 'absolute' : 'fixed'} bottom-0 left-0 right-0 bg-white border-t border-gray-200 z-30`} style={{ paddingBottom: 'max(8px, env(safe-area-inset-bottom))' }}>
         <div className="h-[4.5rem] flex items-center justify-around">
           <button
             onClick={() => { setActiveTab('shifts'); setSelectedDate(null); }}
