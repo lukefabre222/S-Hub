@@ -9,6 +9,7 @@ import Login from './components/Login';
 import DailyAttendance from './components/DailyAttendance';
 import Messages from './components/Messages';
 import { useShiftStore, BUSINESS_TYPES, getDayOfWeek, isHoliday, ROLES } from './store/useShiftStore';
+import { isPushSupported, subscribeToPush } from './lib/pushSubscription';
 import { Share2, FileText, Settings, Users, LogOut, ChevronLeft, ChevronRight, TrendingUp, ClipboardList, Smartphone, FileBarChart, PanelLeftClose, PanelRightClose, Columns, Building, Clock, MessageCircle, Bell, CheckCircle } from 'lucide-react';
 import Logo from "./assets/S-Hub_logo.png"
 import Icon from "./assets/S-Hub_icon.png"
@@ -421,6 +422,27 @@ export default function App() {
     }
   }, [currentUser, isDataLoaded]);
 
+  // プッシュ通知バナー
+  const [showPushBanner, setShowPushBanner] = useState(false);
+  useEffect(() => {
+    if (!currentUser || !isPushSupported()) return;
+    const permission = Notification.permission;
+    if (permission === 'granted') {
+      subscribeToPush(currentUser.id);
+    } else if (permission === 'default' && !sessionStorage.getItem('push-banner-dismissed')) {
+      setShowPushBanner(true);
+    }
+  }, [currentUser]);
+
+  const handleEnablePush = async () => {
+    const permission = await Notification.requestPermission();
+    setShowPushBanner(false);
+    sessionStorage.setItem('push-banner-dismissed', '1');
+    if (permission === 'granted') {
+      await subscribeToPush(currentUser.id);
+    }
+  };
+
   // データ初期化（ログイン後・未ロード時のみ実行）
   useEffect(() => {
     if (!currentUser || isDataLoaded) return;
@@ -484,6 +506,22 @@ export default function App() {
     return <Login />;
   }
 
+  // プッシュ通知バナー
+  const PushBanner = () => showPushBanner ? (
+    <div className="fixed bottom-0 left-0 right-0 z-[100] bg-indigo-700 text-white px-4 py-3 flex items-center gap-3 shadow-2xl">
+      <Bell size={20} className="shrink-0" />
+      <p className="flex-1 text-sm font-medium">新着メッセージ・アサイン通知をプッシュで受け取りますか？</p>
+      <button
+        onClick={handleEnablePush}
+        className="bg-white text-indigo-700 font-bold text-xs px-3 py-1.5 rounded-md shrink-0 hover:bg-indigo-50 transition-colors"
+      >有効にする</button>
+      <button
+        onClick={() => { setShowPushBanner(false); sessionStorage.setItem('push-banner-dismissed', '1'); }}
+        className="text-indigo-300 hover:text-white text-xl leading-none shrink-0"
+      >×</button>
+    </div>
+  ) : null;
+
   // iOSインストールバナー（スタッフ含む全ロールで表示）
   const InstallBanner = () => showInstallBanner ? (
     <div className="fixed bottom-0 left-0 right-0 z-[100] bg-slate-900 text-white px-4 py-3 flex items-start gap-3 shadow-2xl">
@@ -505,6 +543,7 @@ export default function App() {
     return (
       <div className="h-[100dvh] w-full overflow-hidden bg-gray-50 font-sans">
         <StaffPortal isPreview={false} />
+        <PushBanner />
         <InstallBanner />
       </div>
     );
@@ -551,6 +590,7 @@ export default function App() {
 
   return (
     <div className="h-screen flex bg-gray-100 overflow-hidden font-sans">
+      <PushBanner />
       <InstallBanner />
 
       {/* サイドバー */}

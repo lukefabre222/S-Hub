@@ -330,6 +330,11 @@ export const useShiftStore = create(
             )];
 
             const notifCalls = [];
+            const pushCalls = [];
+
+            const sendPush = (userId, title, body) => {
+              supabase.functions.invoke('send-push', { body: { userId, title, body, url: '/' } }).catch(() => {});
+            };
 
             // 店舗管理者へ通知
             if (shopIds.length > 0) {
@@ -339,30 +344,33 @@ export const useShiftStore = create(
                 .eq('role', ROLES.SHOP_ADMIN)
                 .in('shop_id', shopIds);
               if (shopAdmins?.length) {
-                notifCalls.push(...shopAdmins.map(admin =>
-                  supabase.rpc('create_notification', {
+                shopAdmins.forEach(admin => {
+                  notifCalls.push(supabase.rpc('create_notification', {
                     target_user_id: admin.id,
                     notif_type: 'assignment_published',
                     notif_title: 'アサイン確定のお知らせ',
                     notif_body: 'スタッフのアサインが確定されました。入店予定をご確認ください。',
                     notif_related_id: user.companyId,
-                  })
-                ));
+                  }));
+                  pushCalls.push(() => sendPush(admin.id, 'アサイン確定のお知らせ', 'スタッフのアサインが確定されました。'));
+                });
               }
             }
 
             // スタッフへ通知
-            notifCalls.push(...draftStaffIds.map(staffId =>
-              supabase.rpc('create_notification', {
+            draftStaffIds.forEach(staffId => {
+              notifCalls.push(supabase.rpc('create_notification', {
                 target_user_id: staffId,
                 notif_type: 'assignment_published',
                 notif_title: 'シフトが確定されました',
                 notif_body: 'スタッフポータルからシフトをご確認ください。',
                 notif_related_id: null,
-              })
-            ));
+              }));
+              pushCalls.push(() => sendPush(staffId, 'シフトが確定されました', 'スタッフポータルからシフトをご確認ください。'));
+            });
 
             await Promise.all(notifCalls);
+            pushCalls.forEach(fn => fn());
           }
         } catch (e) {
           console.error("Publish failed:", e);
@@ -378,15 +386,21 @@ export const useShiftStore = create(
             .eq('role', ROLES.COMPANY_ADMIN)
             .eq('company_id', companyId);
           if (companyAdmins?.length) {
+            const title = `${shop?.name || '店舗'}からオーダーが届きました`;
             await Promise.all(companyAdmins.map(admin =>
               supabase.rpc('create_notification', {
                 target_user_id: admin.id,
                 notif_type: 'order_submitted',
-                notif_title: `${shop?.name || '店舗'}からオーダーが届きました`,
+                notif_title: title,
                 notif_body: 'オーダー管理画面から内容をご確認ください。',
                 notif_related_id: shopId,
               })
             ));
+            companyAdmins.forEach(admin => {
+              supabase.functions.invoke('send-push', {
+                body: { userId: admin.id, title, body: 'オーダー管理画面から内容をご確認ください。', url: '/' }
+              }).catch(() => {});
+            });
           }
         } catch (e) {
           console.error('オーダー通知送信失敗:', e);
@@ -959,6 +973,17 @@ export const useShiftStore = create(
               c.id === conversationId ? { ...c, lastMessage: fullMsg } : c
             ),
           }));
+
+          // プッシュ通知（会話の相手側へ、fire-and-forget）
+          supabase.functions.invoke('send-push', {
+            body: {
+              conversationId,
+              senderId: currentUser.id,
+              title: currentUser.name,
+              body: content.length > 60 ? content.slice(0, 60) + '…' : content,
+              url: '/',
+            }
+          }).catch(() => {});
         } catch (e) {
           console.error('sendMessage error:', e);
           set(state => ({
